@@ -10,10 +10,10 @@ import (
 )
 
 func TestTrySign(t *testing.T) {
-	run_test(t)
+	run_sign_test(t)
 }
 
-func run_test(t *testing.T) {
+func run_sign_test(t *testing.T) {
 	b, err := ioutil.ReadFile("data")
 	if err != nil {
 		panic("read file failed")
@@ -43,6 +43,43 @@ func run_test(t *testing.T) {
 			assert(se, hex.EncodeToString(s), t)
 		}
 	}
+}
+
+func TestVerify(t *testing.T) {
+	run_verify_test(t)
+}
+
+func run_verify_test(t *testing.T) {
+	b, err := ioutil.ReadFile("data")
+	if err != nil {
+		panic("read file failed")
+	}
+
+	var data []map[string]string
+	err2 := json.Unmarshal(b, &data)
+
+	if err2 != nil {
+		panic("unmarshal failed")
+	}
+
+	fmt.Printf("test data number = %d", len(data))
+
+	n := 0
+
+	for _, v := range data {
+		n++
+		msg := hex_bytes(v["msg"])
+		pub := hex_bytes(v["pub"])
+		r := hex_bytes(v["r"])
+		s := hex_bytes(v["s"])
+		result := Verify(pub, msg, r, s)
+		if !result {
+			fmt.Printf("r = %s\n", hex.EncodeToString(r))
+			panic("verify failed")
+		}
+	}
+
+	fmt.Printf("n = %d", n)
 }
 
 func hex_bytes(hs string) []byte {

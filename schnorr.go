@@ -1,7 +1,9 @@
 package go_schnorr
 
 import (
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"github.com/btcsuite/btcd/btcec"
 	"math/big"
 )
@@ -48,4 +50,39 @@ func TrySign(privateKey []byte, publicKey []byte, message []byte, k []byte) ([]b
 	}
 
 	return r.Bytes(), s.Bytes(), nil
+}
+
+func Verify(publicKey []byte, msg []byte, r []byte, s []byte) bool {
+
+	//cannot be zero
+	if new(big.Int).SetBytes(r).Cmp(new(big.Int).SetInt64(0)) == 0 || new(big.Int).SetBytes(s).Cmp(new(big.Int).SetInt64(0)) == 0 {
+		fmt.Printf("Invalid R or S value: cannot be zero")
+		return false
+	}
+
+	//cannot be negative
+	if new(big.Int).SetBytes(r).Sign() == -1 || new(big.Int).SetBytes(s).Sign() == -1 {
+		fmt.Printf("Invalid R or S value: cannot be negative")
+		return false
+	}
+
+	puk, err := btcec.ParsePubKey(publicKey, secp256k1)
+
+	if err != nil {
+		panic("parse public key error")
+	}
+
+	pkx, pky := puk.X, puk.Y
+
+	lx, ly := secp256k1.ScalarMult(pkx, pky, r)
+	rx, ry := secp256k1.ScalarBaseMult(s)
+	Qx, Qy := secp256k1.Add(rx, ry, lx, ly)
+	Q := Compress(secp256k1, Qx, Qy)
+
+	_r := hash(Q, publicKey, msg)
+
+	rn := new(big.Int).SetBytes(r)
+	_rn := new(big.Int).SetBytes(_r)
+	fmt.Printf("r = %s, _r = %s\n", hex.EncodeToString(r), hex.EncodeToString(_r))
+	return rn.Cmp(_rn) == 0
 }
